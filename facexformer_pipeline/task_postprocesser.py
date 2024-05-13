@@ -12,7 +12,7 @@ from network import FaceXFormer
 from facenet_pytorch import MTCNN
 import os
 # from argparse import  args
-from facexformer_utils import denorm_points, unnormalize, adjust_bbox, visualize_head_pose, visualize_landmarks, visualize_mask
+from utils import denorm_points, unnormalize, adjust_bbox, visualize_head_pose, visualize_landmarks, visualize_mask
 
 def process_visibility(visibility_output):
     probs = torch.sigmoid(visibility_output[0])

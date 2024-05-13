@@ -151,16 +151,15 @@ def main():
     image_path = "sample_image.jpg"
     uih = UniversalImageInputHandler(image_path, debug=False)
     COMPATIBLE, img = uih.COMPATIBLE, uih.img
-
-    # model_path= "./ckpts/model.pt"
-    # todo fix symbolic link issue
-    #model_path = "/Users/ns/.cache/huggingface/hub/models--kartiknarayan--facexformer/blobs/327a755849ba64d336fb96589ff87b27e84a12be1ecf8bcfaa503d66f803286d"
-
-    #pipeline = FacexformerPipeline(debug=False, model_path=model_path, tasks=['headpose', 'landmark', 'attributes'])
     pipeline = FacexformerPipeline(debug=False, tasks=['headpose', 'landmark', 'attributes'])
+    results = pipeline.run_model(img)
 
-    results=pipeline.run_model(uih.img)
     print(results["headpose"])
+
+
+
+    # results=pipeline.run_model(uih.img)
+    # print(results["headpose"])
     # print(results["age_gender_race_dict"])
     # print(results["visibility_result"])
 
