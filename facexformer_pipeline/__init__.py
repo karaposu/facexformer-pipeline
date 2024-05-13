@@ -1,1 +1,1 @@
-from .facexformer_pipeline import facexformer_pipeline
+from .facexformer_pipeline import FacexformerPipeline
