@@ -145,8 +145,6 @@ class FacexformerPipeline:
         results['image'] = image
         return results
 
-
-
 def main():
     image_path = "sample_image.jpg"
     uih = UniversalImageInputHandler(image_path, debug=False)
@@ -156,16 +154,10 @@ def main():
 
     print(results["headpose"])
 
-
-
     # results=pipeline.run_model(uih.img)
     # print(results["headpose"])
     # print(results["age_gender_race_dict"])
     # print(results["visibility_result"])
-
-
-
-
 
 if __name__ == "__main__":
 
