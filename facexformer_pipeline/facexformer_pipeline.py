@@ -11,7 +11,7 @@ from PIL import Image
 from network import FaceXFormer
 from facenet_pytorch import MTCNN
 from image_input_handler import  UniversalImageInputHandler
-from utils import denorm_points, unnormalize, adjust_bbox, visualize_head_pose, visualize_landmarks, visualize_mask
+from facexformer_pipeline.utils import denorm_points, unnormalize, adjust_bbox, visualize_head_pose, visualize_landmarks, visualize_mask
 from task_postprocesser import task_faceparsing,  process_landmarks, task_headpose , task_attributes, task_gender, process_visibility
 import torchvision.transforms as transforms
 from huggingface_hub import hf_hub_download
@@ -124,9 +124,32 @@ class FacexformerPipeline:
             results['age_gender_race_dict'] = task_gender(output[4], output[5], output[6])
         elif task_id == 5:
             results['visibility'] = process_visibility(output[3])
+
+    # from PIL import Image, ImageDraw
+    # import numpy as np
+
+    def scale_landmarks_to_original_image(self, original_image, landmarks, resized_image_size=(224, 224)):
+        # print("landmarks[0]:", landmarks[0])
+        original_width, original_height = original_image.shape[1],  original_image.shape[0]
+        # print("original_width:", original_width, "original_height:", original_height)
+        resized_width, resized_height = resized_image_size
+        scale_x = original_width / resized_width
+        scale_y = original_height / resized_height
+
+        # Scale landmarks back to original image dimensions
+
+
+        scaled_landmarks = [(x * scale_x, y * scale_y) for (x, y) in landmarks]
+        scaled_landmarks_int = [(int(round(x)), int(round(y))) for (x, y) in scaled_landmarks]
+
+        # print("scaled_landmarks[0]:", scaled_landmarks[0])
+
+        return scaled_landmarks_int
+
+
     def run_model(self, image, image_is_cropped=True):
         results = {}
-
+        original_image=image.copy()
         image = Image.fromarray(image)
         if not image_is_cropped:
             image = self.crop_face_area_from_image(image)
@@ -143,6 +166,9 @@ class FacexformerPipeline:
         image = (image * 255).astype(np.uint8)
         image = image[:, :, ::-1]
         results['image'] = image
+        results['transformed_image'] = model_ready_image[0]
+
+        results['scaled_landmarks'] =self.scale_landmarks_to_original_image(original_image,results['landmark_list'] )
         return results
 
 def main():

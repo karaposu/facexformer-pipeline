@@ -12,7 +12,7 @@ from network import FaceXFormer
 from facenet_pytorch import MTCNN
 import os
 # from argparse import  args
-from utils import denorm_points, unnormalize, adjust_bbox, visualize_head_pose, visualize_landmarks, visualize_mask
+from facexformer_pipeline.utils import denorm_points, unnormalize, adjust_bbox, visualize_head_pose, visualize_landmarks, visualize_mask
 
 def process_visibility(visibility_output):
     probs = torch.sigmoid(visibility_output[0])
@@ -81,15 +81,11 @@ def process_landmarks(landmark_output,images ):
     landmarks_list = []
     for landmark in denorm_landmarks[0]:
         x, y = landmark[0], landmark[1]
-        landmarks_list.append((int(x.item()), int(y.item())))
+        # landmarks_list.append((int(x.item()), int(y.item())))
+        landmarks_list.append((int(round(x.item())), int(round(y.item()))))
 
-    # landmarks_dict = {}
-    # for index, landmark in enumerate(denorm_landmarks[0]):
-    #     x, y = landmark[0], landmark[1]
-    #     landmarks_dict[f"landmark_{index}"] = (x.item(), y.item())
-
-    im = visualize_landmarks(image, denorm_landmarks, (255, 255, 0))
+    # im = visualize_landmarks(image, denorm_landmarks, (255, 255, 0))
     # save_path_viz = os.path.join(args.results_path, "landmarks.png")
-    cv2.imwrite("./landmarks.png", im[:, :, ::-1])
+    # cv2.imwrite("./landmarks.png", im[:, :, ::-1])
 
     return landmarks_list
