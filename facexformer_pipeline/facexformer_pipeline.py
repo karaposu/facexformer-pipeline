@@ -167,8 +167,8 @@ class FacexformerPipeline:
         image = image[:, :, ::-1]
         results['image'] = image
         results['transformed_image'] = model_ready_image[0]
-
-        results['scaled_landmarks'] =self.scale_landmarks_to_original_image(original_image,results['landmark_list'] )
+        if 1 in self.active_tasks:
+            results['scaled_landmarks'] =self.scale_landmarks_to_original_image(original_image,results['landmark_list'] )
         return results
 
 def main():
