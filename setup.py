@@ -3,10 +3,9 @@ import setuptools
 import subprocess
 import os
 
-
 setup(
     name='facexformer_pipeline',  # Package name
-    version='0.2.4',  # Version of your package
+    version='0.2.5',  # Version of your package
     author='Enes Kuzucu',  # Your name
 
     description='A module to run facexformer model as pipeline',  # Short description

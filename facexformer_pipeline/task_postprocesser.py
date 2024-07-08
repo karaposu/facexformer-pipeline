@@ -39,24 +39,15 @@ def task_attributes(attribute_output):
     pred = preds.tolist()
     pred_str = [str(int(b)) for b in pred]
     return pred_str
-def task_headpose(headpose_output, images):
+def task_headpose(headpose_output):
     pitch = headpose_output[0][0].item() * 180 / np.pi
     yaw = headpose_output[0][1].item() * 180 / np.pi
     roll = headpose_output[0][2].item() * 180 / np.pi
-
-    # print("pitch:", pitch)
-    # print("yaw:", yaw)
-    # print("roll:", roll)
 
     headpose_dict = {"pitch": pitch,
                      "yaw": yaw,
                      "roll": roll ,
                      "raw": headpose_output[0]}
-    visualize_debug = 0
-    if visualize_debug == 1:
-        image = unnormalize(images[0].detach().cpu())
-        im = visualize_head_pose(image, headpose_output[0])
-        cv2.imwrite("./headpose.png", im[:, :, ::-1])
 
     return headpose_dict
 
@@ -73,10 +64,11 @@ def task_faceparsing(seg_output):
 
     return pred_mask
 
-def process_landmarks(landmark_output,images ):
+
+def process_landmarks(landmark_output ):
     denorm_landmarks = denorm_points(landmark_output.view(-1, 68, 2)[0], 224, 224)
     denorm_landmarks=denorm_landmarks.detach().cpu()
-    image = unnormalize(images[0].detach().cpu())
+   # image = unnormalize(images[0].detach().cpu())
 
     landmarks_list = []
     for landmark in denorm_landmarks[0]:
@@ -89,3 +81,20 @@ def process_landmarks(landmark_output,images ):
     # cv2.imwrite("./landmarks.png", im[:, :, ::-1])
 
     return landmarks_list
+
+# def process_landmarks(landmark_output,images ):
+#     denorm_landmarks = denorm_points(landmark_output.view(-1, 68, 2)[0], 224, 224)
+#     denorm_landmarks=denorm_landmarks.detach().cpu()
+#     image = unnormalize(images[0].detach().cpu())
+#
+#     landmarks_list = []
+#     for landmark in denorm_landmarks[0]:
+#         x, y = landmark[0], landmark[1]
+#         # landmarks_list.append((int(x.item()), int(y.item())))
+#         landmarks_list.append((int(round(x.item())), int(round(y.item()))))
+#
+#     # im = visualize_landmarks(image, denorm_landmarks, (255, 255, 0))
+#     # save_path_viz = os.path.join(args.results_path, "landmarks.png")
+#     # cv2.imwrite("./landmarks.png", im[:, :, ::-1])
+#
+#     return landmarks_list
