@@ -41,13 +41,18 @@ def task_attributes(attribute_output):
     return pred_str
 def task_headpose(headpose_output):
     pitch = headpose_output[0][0].item() * 180 / np.pi
+    pitch = round(pitch, 1)
     yaw = headpose_output[0][1].item() * 180 / np.pi
+    yaw = round(yaw, 1)
     roll = headpose_output[0][2].item() * 180 / np.pi
+    roll = round(roll, 1)
+
+    raw=  headpose_output[0].detach().numpy().tolist()
 
     headpose_dict = {"pitch": pitch,
                      "yaw": yaw,
                      "roll": roll ,
-                     "raw": headpose_output[0]}
+                     "raw": raw}
 
     return headpose_dict
 

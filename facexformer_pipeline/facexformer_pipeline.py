@@ -103,6 +103,15 @@ class FacexformerPipeline:
         rightflexoffset = right_margin_ratio
 
         x, y, w, h = face_coordinates
+        # try:
+        #     x, y, w, h = face_coordinates
+        # except Exception as e:
+        #     print("Error unpacking fd_coordinates:", e)
+        #     raise
+
+        # print("y: ", y)
+        # print("chinflexoffset: ", chinflexoffset)
+        # print("h: ", h)
         bottom_cut_line_coordinate = y + int(h * (1 + chinflexoffset))
         # Apply right and left flex offsets
         right_cut_line = x + int(w * (1 + rightflexoffset))
@@ -132,20 +141,22 @@ class FacexformerPipeline:
 
         return rect
 
-    def calculate_head_ROI(self,
-                           bottom_margin_ratio=0.25,
-                           top_margin_ratio=0.35,
-                           left_margin_ratio=0.40,
-                           right_margin_ratio=0.40
-                           ):
+    def calculate_head_ROI(self,image, fd_coordinates):
 
-        head_ROI_coordinates=self.find_head_ROI_coordinates( self.fd_coordinates,
+        bottom_margin_ratio = 0.25
+        top_margin_ratio = 0.35
+        left_margin_ratio = 0.40
+        right_margin_ratio = 0.40
+
+       # print(">>>>>>>>>>>>>fd_coordinates:",fd_coordinates )
+
+        head_ROI_coordinates=self.find_head_ROI_coordinates( fd_coordinates,
                                                     bottom_margin_ratio,
                                                     top_margin_ratio,
                                                     left_margin_ratio,
                                                     right_margin_ratio)
 
-        head_ROI = self.crop_rect_ROI_from_Img( self.img, head_ROI_coordinates)
+        head_ROI = self.crop_rect_ROI_from_Img(image, head_ROI_coordinates)
 
         return  head_ROI, head_ROI_coordinates
 
@@ -246,7 +257,7 @@ class FacexformerPipeline:
         return global_landmarks
 
     # def process_task_output(self, original_image, task_id, output, results):
-    def process_task_output(self, original_image, face_ROI, face_coordinates, head_ROI, task_id, output, results):
+    def process_task_output(self, original_image, face_ROI, face_coordinates, head_ROI, task_id, output, already_cropped,  results):
         if task_id == 0:
             results['faceparsing_mask'] = task_faceparsing(output[7])
         elif task_id == 1:
@@ -255,7 +266,10 @@ class FacexformerPipeline:
 
             #results['landmarks'] =self.scale_landmarks_to_original_image(original_image,results['landmark_list'] )
             results['landmarks_face_ROI'] =self.scale_landmarks_to_original_image(face_ROI,results['landmark_list'] )
-            results['landmarks']= self.convert_local_to_global( results['landmarks_face_ROI'], face_coordinates)
+            if already_cropped:
+                results['landmarks'] = results['landmarks_face_ROI']
+            else:
+                results['landmarks']= self.convert_local_to_global( results['landmarks_face_ROI'], face_coordinates)
 
             # results['landmarks'] = self.scale_landmarks_to_original_image(original_image, x)
         elif task_id == 2:
@@ -358,19 +372,21 @@ class FacexformerPipeline:
             else:
                 output = self.model(model_ready_face_ROI_image, labels, task)
             # self.process_task_output(original_image, i, output, results)
-            self.process_task_output(original_image, face_ROI,face_coordinates,  head_ROI,  i, output, results)
+            self.process_task_output(original_image, face_ROI,face_coordinates,  head_ROI,  i, output,already_cropped,  results)
 
 
 
+        if not already_cropped:
+            pass
 
-        annotations = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmark_list"], color=(0, 255, 0))]
-        self.vdebugger.visual_debug(debug_transformed_face_ROI,annotations,  name="raw_lm_on_transformed")
+            # annotations = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmark_list"], color=(0, 255, 0))]
+            # self.vdebugger.visual_debug(debug_transformed_face_ROI,annotations,  name="raw_lm_on_transformed")
+            #
+            # annotations = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks_face_ROI"], color=(0, 255, 0))]
+            # self.vdebugger.visual_debug(face_ROI, annotations, name="scaled_lm_on_face_ROI")
 
-        annotations = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks_face_ROI"], color=(0, 255, 0))]
-        self.vdebugger.visual_debug(face_ROI, annotations, name="scaled_lm_on_face_ROI")
-
-        annotations = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks"], color=(0, 255, 0))]
-        self.vdebugger.visual_debug(original_image, annotations, name="scaled_lm_on_org_img")
+        # annotations = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks"], color=(0, 255, 0))]
+        # self.vdebugger.visual_debug(original_image, annotations, name="scaled_lm_on_org_img")
 
        # face_ROI=model_ready_face_ROI_image[0].detach().cpu()
 
@@ -426,13 +442,35 @@ def main():
     # pipeline = FacexformerPipeline(debug=False, tasks=['headpose', 'landmark', 'attributes'])
 
 
-    # Lets say we only need landmarks
-    pipeline = FacexformerPipeline(debug=False, tasks=['landmark'])
+   #  # Lets say we only need landmarks
+   #  pipeline = FacexformerPipeline(debug=False, tasks=['landmark'])
+   # # results = pipeline.run_model2(img2)
+   #
+   #  results = pipeline.run_model2(img2, already_cropped = True)
+
+    # pipeline = FacexformerPipeline(debug=False, tasks=['landmark', 'headpose'])
+    # results = pipeline.run_model2(img1)
+
+    pipeline = FacexformerPipeline(debug=False, tasks=['faceparsing'])
     results = pipeline.run_model2(img1)
+
+
 
     print(results)
 
-    print(results["landmarks"])
+    # print(results["faceparsing_mask"])
+
+    print( type(results["faceparsing_mask"]))
+    print( results["faceparsing_mask"].shape)
+
+    unique_values, frequencies = np.unique(results["faceparsing_mask"], return_counts=True)
+    for value, count in zip(unique_values, frequencies):
+        print(f"after_scale_source_mask_value: {value}, Frequency: {count}")
+
+
+
+    # print(results["landmarks"])
+    # print(results["headpose"])
 
 
     # vdebugger = VisualDebugger(tag="facex", debug_folder_path="./", active=True)
