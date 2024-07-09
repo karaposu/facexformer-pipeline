@@ -110,7 +110,7 @@ vdebugger.visual_debug(img, annotation_landmarks, name="landmarks", stage_name="
 vdebugger.visual_debug(results["face_ROI"], annotation_headpose, name="headpose")
 vdebugger.visual_debug(results["head_ROI"], annotation_faceparsing_head_ROI, name="faceparsing", stage_name="mask_on_head_ROI")
 vdebugger.visual_debug(img, annotation_faceparsing, name="faceparsing", stage_name="mask_on_full_image")
-vdebugger.cook_merged_img() # creates merged images
+vdebugger.cook_merged_img() # creates merged image
 ```
 
 ## Acknowledgements
