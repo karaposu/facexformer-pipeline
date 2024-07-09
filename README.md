@@ -4,7 +4,7 @@ This repository contains the easy-to-use pipeline implementation of the FaceXFor
 
 Here is official code repo : https://github.com/Kartik-3004/facexformer
 
-![Alt text]("./0_merged.png")
+![Alt text]("https://github.com/karaposu/facexformer-pipeline/blob/main/0_merged.png?raw=true")
 
 What this implementation does differently?
 
