@@ -5,7 +5,7 @@ import os
 
 setup(
     name='facexformer_pipeline',  # Package name
-    version='0.2.7',  # Version of your package
+    version='0.2.8',  # Version of your package
     author='Enes Kuzucu',  # Your name
 
     description='A module to run facexformer model as pipeline',  # Short description
