@@ -25,6 +25,7 @@ from huggingface_hub import hf_hub_download
 import numpy as np
 import torch
 from visual_debugger import VisualDebugger, Annotation, AnnotationType
+import cv2
 
 class FacexformerPipeline:
     TASK_MAP = {
@@ -143,10 +144,10 @@ class FacexformerPipeline:
 
     def calculate_head_ROI(self,image, fd_coordinates):
 
-        bottom_margin_ratio = 0.25
-        top_margin_ratio = 0.35
-        left_margin_ratio = 0.40
-        right_margin_ratio = 0.40
+        bottom_margin_ratio = 0.30
+        top_margin_ratio = 0.30
+        left_margin_ratio = 0.30
+        right_margin_ratio = 0.30
 
        # print(">>>>>>>>>>>>>fd_coordinates:",fd_coordinates )
 
@@ -201,12 +202,6 @@ class FacexformerPipeline:
                 h = int(y_max - y_min)
                 fd= [ x, y, w, h]
 
-
-
-            # width, height = image.size
-            # x_min, y_min, x_max, y_max = adjust_bbox(x_min, y_min, x_max, y_max, width, height)
-            # image.crop((int(x_min), int(y_min), int(x_max), int(y_max)))
-
             return fd
 
     def obtain_various_crops_of_the_image(self,image, fd_coordinates):
@@ -217,17 +212,17 @@ class FacexformerPipeline:
 
 
 
-    def crop_face_area_from_image(self, image):
-        # mtcnn = MTCNN(keep_all=True)
-        boxes, _ = self.mtcnn.detect(image)
-        if boxes is not None:
-            x_min, y_min, x_max, y_max = boxes[0]
-            width, height = image.size
-            x_min, y_min, x_max, y_max = adjust_bbox(x_min, y_min, x_max, y_max, width, height)
-            return image.crop((int(x_min), int(y_min), int(x_max), int(y_max)))
-        if self.debug:
-            print("No faces detected.")
-        return image  # Return unmodified image if no face is detected
+    # def crop_face_area_from_image(self, image):
+    #     # mtcnn = MTCNN(keep_all=True)
+    #     boxes, _ = self.mtcnn.detect(image)
+    #     if boxes is not None:
+    #         x_min, y_min, x_max, y_max = boxes[0]
+    #         width, height = image.size
+    #         x_min, y_min, x_max, y_max = adjust_bbox(x_min, y_min, x_max, y_max, width, height)
+    #         return image.crop((int(x_min), int(y_min), int(x_max), int(y_max)))
+    #     if self.debug:
+    #         print("No faces detected.")
+    #     return image  # Return unmodified image if no face is detected
 
     def initialize_labels(self):
         label_shapes = {
@@ -246,6 +241,21 @@ class FacexformerPipeline:
         labels = {k: v.unsqueeze(0).to(self.device) for k, v in labels.items()}
         return image, labels
 
+    def place_mask_in_original_image(self,original_image, head_mask, face_coords):
+        # Get original image dimensions
+        orig_height, orig_width = original_image.shape[:2]
+
+        # Create an empty mask with the same size as the original image
+        full_size_mask = np.zeros((orig_height, orig_width), dtype=np.uint8)
+
+        # Get the face coordinates
+        x, y, w, h = face_coords
+
+        # Place the head mask into the full-size mask
+        full_size_mask[y:y + h, x:x + w] = head_mask
+
+        return full_size_mask
+
 
     def convert_local_to_global(self, local_landmarks, roi_start_point):
         # roi_start_point now is expected to be (left_cut_line, top_cut_line_coordinate)
@@ -257,9 +267,39 @@ class FacexformerPipeline:
         return global_landmarks
 
     # def process_task_output(self, original_image, task_id, output, results):
-    def process_task_output(self, original_image, face_ROI, face_coordinates, head_ROI, task_id, output, already_cropped,  results):
+    def process_task_output(self, original_image, face_ROI, face_coordinates, head_ROI, head_ROI_coordinates, task_id, output, already_cropped,  results):
+        results["face_coordinates"]= face_coordinates
+        results["head_ROI"] = head_ROI
+        results["face_ROI"] = face_ROI
+        results["head_coordinates"] = head_ROI_coordinates
+
+
         if task_id == 0:
-            results['faceparsing_mask'] = task_faceparsing(output[7])
+            normalized_faceparsing_mask = task_faceparsing(output[7])
+            results['normalized_faceparsing_mask']=normalized_faceparsing_mask
+
+            white_image = np.ones((224, 224, 3), dtype=np.uint8) * 255
+            annotations = [Annotation(type=AnnotationType.MASK, mask=normalized_faceparsing_mask, color=(0, 255, 0))]
+            # self.vdebugger.visual_debug(white_image, annotations, name="pure_faceparsing_mask")
+
+            # results['normalized_faceparsing_mask']
+
+            head_ROI_size = head_ROI.shape[:2]
+            resized_mask = cv2.resize(normalized_faceparsing_mask, (head_ROI_size[1], head_ROI_size[0]), interpolation=cv2.INTER_NEAREST)
+
+            results['faceparsing_mask_head_ROI']=resized_mask
+            full_size_mask = self.place_mask_in_original_image(original_image, resized_mask, head_ROI_coordinates)
+            results['faceparsing_mask'] = full_size_mask
+
+
+            # unique_values, frequencies = np.unique(resized_mask, return_counts=True)
+            # for value, count in zip(unique_values, frequencies):
+            #     print(f"mask valuesss: {value}, Frequency: {count}")
+
+
+
+
+
         elif task_id == 1:
             results['landmark_list'] = process_landmarks(output[0])
             # x=denorm_points(results['landmark_list'], 224, 224, align_corners=False)
@@ -302,7 +342,7 @@ class FacexformerPipeline:
 
         return scaled_landmarks_int
 
-    def run_model2(self, image, face_coordinates=None, already_cropped=False,  head_coordinates=None ):
+    def run_model(self, image, face_coordinates=None, already_cropped=False,  head_coordinates=None ):
 
 
         # already cropped means, already face cropped
@@ -325,19 +365,19 @@ class FacexformerPipeline:
                 print("-----------fd_coordinates:",face_coordinates )
 
                 annotations = [ Annotation(type=AnnotationType.RECTANGLE, coordinates=face_coordinates, color=(0, 255, 0))]
-                self.vdebugger.visual_debug(original_image, annotations, name="fd_on_org_image")
+                # self.vdebugger.visual_debug(original_image, annotations, name="fd_on_org_image")
 
 
                 face_ROI = self.crop_rect_ROI_from_Img(image, face_coordinates)
 
-                self.vdebugger.visual_debug(face_ROI, name="face_ROI")
+                # self.vdebugger.visual_debug(face_ROI, name="face_ROI")
 
 
                 transformed_face_ROI = self.transform_image(Image.fromarray(face_ROI))
-                import cv2
+                # import cv2
                 debug_transformed_face_ROI = cv2.resize(face_ROI, (224, 224), interpolation=cv2.INTER_CUBIC)
 
-                self.vdebugger.visual_debug(debug_transformed_face_ROI, name="transformed_face_ROI")
+                # self.vdebugger.visual_debug(debug_transformed_face_ROI, name="transformed_face_ROI")
 
                 model_ready_face_ROI_image, labels = self.prepare_for_model(transformed_face_ROI, self.labels)
                 if 0 in self.active_tasks:
@@ -372,7 +412,7 @@ class FacexformerPipeline:
             else:
                 output = self.model(model_ready_face_ROI_image, labels, task)
             # self.process_task_output(original_image, i, output, results)
-            self.process_task_output(original_image, face_ROI,face_coordinates,  head_ROI,  i, output,already_cropped,  results)
+            self.process_task_output(original_image, face_ROI, face_coordinates,  head_ROI, head_ROI_coordinates,  i, output,already_cropped,  results)
 
 
 
@@ -405,82 +445,72 @@ class FacexformerPipeline:
         # image = self.transform_image(image)
         # model_ready_image, labels = self.prepare_for_model(image, self.labels)
 
-    def run_model(self, image, image_is_cropped=True):
-        results = {}
-        original_image=image.copy()
-        image = Image.fromarray(image)
-        if not image_is_cropped:
-            image = self.crop_face_area_from_image(image)
-        image = self.transform_image(image)
-        model_ready_image, labels = self.prepare_for_model(image, self.labels)
-
-        for i in self.active_tasks:
-            task = torch.tensor([i]).to(self.device)
-            output = self.model(model_ready_image, labels, task)
-            self.process_task_output(i, output, results, model_ready_image)
-
-        image = unnormalize(model_ready_image[0].detach().cpu())
-        image = image.permute(1, 2, 0).numpy()
-        image = (image * 255).astype(np.uint8)
-        image = image[:, :, ::-1]
-        results['image'] = image
-        results['transformed_image'] = model_ready_image[0]
-        if 1 in self.active_tasks:
-            results['landmarks'] =self.scale_landmarks_to_original_image(original_image,results['landmark_list'] )
-        return results
+    # def run_model(self, image, image_is_cropped=True):
+    #     results = {}
+    #     original_image=image.copy()
+    #     image = Image.fromarray(image)
+    #     if not image_is_cropped:
+    #         image = self.crop_face_area_from_image(image)
+    #     image = self.transform_image(image)
+    #     model_ready_image, labels = self.prepare_for_model(image, self.labels)
+    #
+    #     for i in self.active_tasks:
+    #         task = torch.tensor([i]).to(self.device)
+    #         output = self.model(model_ready_image, labels, task)
+    #         self.process_task_output(i, output, results, model_ready_image)
+    #
+    #     image = unnormalize(model_ready_image[0].detach().cpu())
+    #     image = image.permute(1, 2, 0).numpy()
+    #     image = (image * 255).astype(np.uint8)
+    #     image = image[:, :, ::-1]
+    #     results['image'] = image
+    #     results['transformed_image'] = model_ready_image[0]
+    #     if 1 in self.active_tasks:
+    #         results['landmarks'] =self.scale_landmarks_to_original_image(original_image,results['landmark_list'] )
+    #     return results
 
 def main():
-    image_path1 = "sample_image.jpg"
-    image_path2 = "sample_image_face_only.jpg"
+
+    image_path1 = "sample_image_head_only.jpg"
 
     uih = UniversalImageInputHandler(image_path1, debug=False)
     img1 = uih.img
 
-    uih = UniversalImageInputHandler(image_path2, debug=False)
-    img2 = uih.img
+    pipeline = FacexformerPipeline(debug=True, tasks=['headpose', 'landmark', 'faceparsing'])
 
-    # pipeline = FacexformerPipeline(debug=False, tasks=['headpose', 'landmark', 'attributes'])
+    results = pipeline.run_model(img1)
 
+    vdebugger = VisualDebugger(tag="acexx", debug_folder_path="./", active=True)
 
-   #  # Lets say we only need landmarks
-   #  pipeline = FacexformerPipeline(debug=False, tasks=['landmark'])
-   # # results = pipeline.run_model2(img2)
-   #
-   #  results = pipeline.run_model2(img2, already_cropped = True)
+    annotation_landmarks_face_ROI = [
+        Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks_face_ROI"], color=(0, 255, 0))]
+    annotation_landmarks = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks"], color=(0, 255, 0))]
+    annotation_headpose = [
+        Annotation(type=AnnotationType.PITCH_YAW_ROLL, orientation= [results["headpose"]["pitch"], results["headpose"]["yaw"], results["headpose"]["roll"]], color=(0, 255, 0))]
+    annotation_face_coordinates = [
+        Annotation(type=AnnotationType.RECTANGLE, coordinates=results["face_coordinates"], color=(0, 255, 0))]
+    annotation_head_coordinates = [
+        Annotation(type=AnnotationType.RECTANGLE, coordinates=results["head_coordinates"], color=(0, 255, 0))]
+    annotation_faceparsing = [Annotation(type=AnnotationType.MASK, mask=results["faceparsing_mask"], color=(0, 255, 0))]
+    annotation_faceparsing_head_ROI = [ Annotation(type=AnnotationType.MASK, mask=results["faceparsing_mask_head_ROI"], color=(0, 255, 0))]
 
-    # pipeline = FacexformerPipeline(debug=False, tasks=['landmark', 'headpose'])
-    # results = pipeline.run_model2(img1)
-
-    pipeline = FacexformerPipeline(debug=False, tasks=['faceparsing'])
-    results = pipeline.run_model2(img1)
-
-
-
-    print(results)
-
-    # print(results["faceparsing_mask"])
-
-    print( type(results["faceparsing_mask"]))
-    print( results["faceparsing_mask"].shape)
-
-    unique_values, frequencies = np.unique(results["faceparsing_mask"], return_counts=True)
-    for value, count in zip(unique_values, frequencies):
-        print(f"after_scale_source_mask_value: {value}, Frequency: {count}")
-
+    vdebugger.visual_debug(img1, name="original_image")
+    vdebugger.visual_debug(img1, annotation_face_coordinates, name="", stage_name="face_coor")
+    vdebugger.visual_debug(results["face_ROI"], name="", stage_name="cropped_face_ROI")
+    vdebugger.visual_debug(img1, annotation_head_coordinates, name="", stage_name="head_coor")
+    vdebugger.visual_debug(results["head_ROI"], name="", stage_name="cropped_head_ROI")
+    vdebugger.visual_debug(results["face_ROI"], annotation_landmarks_face_ROI, name="landmarks", stage_name= "on_face_ROI")
+    vdebugger.visual_debug(img1, annotation_landmarks, name="landmarks", stage_name= "on_image")
+    vdebugger.visual_debug(results["face_ROI"], annotation_headpose, name="headpose")
+    vdebugger.visual_debug(results["head_ROI"], annotation_faceparsing_head_ROI,name="faceparsing",  stage_name="mask_on_head_ROI")
+    vdebugger.visual_debug(img1, annotation_faceparsing, name="faceparsing", stage_name="mask_on_full_image")
+    vdebugger.cook_merged_img()
 
 
-    # print(results["landmarks"])
-    # print(results["headpose"])
 
 
-    # vdebugger = VisualDebugger(tag="facex", debug_folder_path="./", active=True)
-    # annotations = [Annotation(type=AnnotationType.POINTS, coordinates= results["landmarks"], color=(0, 255, 0))]
-    # vdebugger.visual_debug(img1, annotations, name="landmarks_on_original_image")
 
-    # results=pipeline.run_model(uih.img)
-    # print(results["headpose"])
-    # print(results["age_gender_race_dict"])
-    # print(results["visibility_result"])
+
 
 if __name__ == "__main__":
 

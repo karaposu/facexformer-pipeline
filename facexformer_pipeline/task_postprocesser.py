@@ -51,8 +51,7 @@ def task_headpose(headpose_output):
 
     headpose_dict = {"pitch": pitch,
                      "yaw": yaw,
-                     "roll": roll ,
-                     "raw": raw}
+                     "roll": roll }
 
     return headpose_dict
 
@@ -61,11 +60,6 @@ def task_faceparsing(seg_output):
     mask = torch.argmax(preds, dim=1)
     pred_mask = mask[0].detach().cpu().numpy()
 
-    visualize_debug = 0
-    # if visualize_debug == 1:
-    #     mask, face, color_mask = visualize_mask(unnormalize(images[0].detach().cpu()), pred_mask)
-    #     save_path = "./parsing_visualization.png"
-    #     cv2.imwrite(f"{save_path}", mask[:, :, ::-1])
 
     return pred_mask
 
