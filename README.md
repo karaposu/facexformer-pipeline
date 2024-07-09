@@ -80,7 +80,7 @@ vdebugger = VisualDebugger(tag="facex", debug_folder_path="./", active=True)
 
 annotation_landmarks_face_ROI = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks_face_ROI"])]
 annotation_landmarks = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks"])]
-annotation_headpose = [Annotation(type=AnnotationType.PITCH_YAW_ROLL, orientation=results["headpose"])]
+annotation_headpose = [Annotation(type=AnnotationType.PITCH_YAW_ROLL, orientation=[results["headpose"]["pitch"],results["headpose"]["yaw"],results["headpose"]["roll"] ])]
 annotation_face_coordinates = [Annotation(type=AnnotationType.RECTANGLE, coordinates=results["face_coordinates"])]
 annotation_head_coordinates = [Annotation(type=AnnotationType.RECTANGLE, coordinates=results["head_coordinates"])]
 annotation_faceparsing = [Annotation(type=AnnotationType.MASK, mask=results["faceparsing_mask"])]
