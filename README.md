@@ -4,8 +4,8 @@ This repository contains the easy-to-use pipeline implementation of the FaceXFor
 
 Here is official code repo : https://github.com/Kartik-3004/facexformer
 
-![Alt text]("https://raw.githubusercontent.com/karaposu/facexformer-pipeline/main/0_merged.png")
 
+![Example Image](0_merged.png)
 What this implementation does differently?
 
 Official implementation is awesome as it is but mainly focuses on benchmarking and therefore it is not application ready yet. With this implementation: 
