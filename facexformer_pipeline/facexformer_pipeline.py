@@ -480,7 +480,7 @@ def main():
 
     results = pipeline.run_model(img1)
 
-    vdebugger = VisualDebugger(tag="acexx", debug_folder_path="./", active=True)
+    vdebugger = VisualDebugger(tag="facex", debug_folder_path="./", active=True)
 
     annotation_landmarks_face_ROI = [
         Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks_face_ROI"], color=(0, 255, 0))]

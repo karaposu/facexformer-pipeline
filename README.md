@@ -78,27 +78,13 @@ from visual_debugger import VisualDebugger, Annotation, AnnotationType
 
 vdebugger = VisualDebugger(tag="facex", debug_folder_path="./", active=True)
 
-annotation_landmarks_face_ROI = [
-    Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks_face_ROI"], color=(0, 255, 0))
-]
-annotation_landmarks = [
-    Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks"], color=(0, 255, 0))
-]
-annotation_headpose = [
-    Annotation(type=AnnotationType.PITCH_YAW_ROLL, orientation=results["headpose"], color=(0, 255, 0))
-]
-annotation_face_coordinates = [
-    Annotation(type=AnnotationType.RECTANGLE, coordinates=results["face_coordinates"], color=(0, 255, 0))
-]
-annotation_head_coordinates = [
-    Annotation(type=AnnotationType.RECTANGLE, coordinates=results["head_coordinates"], color=(0, 255, 0))
-]
-annotation_faceparsing = [
-    Annotation(type=AnnotationType.MASK, mask=results["faceparsing_mask"], color=(0, 255, 0))
-]
-annotation_faceparsing_head_ROI = [
-    Annotation(type=AnnotationType.MASK, mask=results["faceparsing_mask_head_ROI"], color=(0, 255, 0))
-]
+annotation_landmarks_face_ROI = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks_face_ROI"])]
+annotation_landmarks = [Annotation(type=AnnotationType.POINTS, coordinates=results["landmarks"])]
+annotation_headpose = [Annotation(type=AnnotationType.PITCH_YAW_ROLL, orientation=results["headpose"])]
+annotation_face_coordinates = [Annotation(type=AnnotationType.RECTANGLE, coordinates=results["face_coordinates"])]
+annotation_head_coordinates = [Annotation(type=AnnotationType.RECTANGLE, coordinates=results["head_coordinates"])]
+annotation_faceparsing = [Annotation(type=AnnotationType.MASK, mask=results["faceparsing_mask"])]
+annotation_faceparsing_head_ROI = [Annotation(type=AnnotationType.MASK, mask=results["faceparsing_mask_head_ROI"])]
 
 vdebugger.visual_debug(img, name="original_image")
 vdebugger.visual_debug(img, annotation_face_coordinates, name="", stage_name="face_coor")
